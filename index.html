@@ -1,0 +1,675 @@
+<html><head><base href="https://example.com/advanced-financial-analytics-dashboard/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Avançado de Análise Financeira Executiva</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+<style>
+  :root {
+    --primary-color: #1a1a2e;
+    --secondary-color: #16213e;
+    --accent-color: #0f3460;
+    --background-color: #0f0f1a;
+    --text-color: #e0e0e0;
+    --border-color: #2a2a3a;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --info-color: #3498db;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 24px;
+    padding: 24px;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background-color: var(--secondary-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    padding: 24px;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .card-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .summary-card {
+    grid-column: span 3;
+  }
+
+  .chart-card {
+    grid-column: span 6;
+  }
+
+  .full-width {
+    grid-column: 1 / -1;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text-color);
+    text-transform: uppercase;
+  }
+
+  .btn {
+    background-color: var(--accent-color);
+    color: var(--text-color);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+  }
+
+  .btn:hover {
+    background-color: var(--primary-color);
+    transform: translateY(-2px);
+  }
+
+  .btn-delete {
+    background-color: var(--danger-color);
+  }
+
+  .btn-delete:hover {
+    background-color: #c0392b;
+  }
+
+  .input-group {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+
+  .alert {
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .alert-success {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+  }
+
+  .alert-error {
+    background-color: rgba(231, 76, 60, 0.2);
+    color: var(--danger-color);
+    border: 1px solid var(--danger-color);
+  }
+
+  .kpi-trend {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    margin-top: 8px;
+  }
+
+  .kpi-trend.positive {
+    color: var(--success-color);
+  }
+
+  .kpi-trend.negative {
+    color: var(--danger-color);
+  }
+
+  .kpi-trend-icon {
+    margin-right: 4px;
+  }
+
+  #savings-goal-progress {
+    width: 100%;
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+
+  #savings-goal-bar {
+    height: 100%;
+    background-color: var(--success-color);
+    transition: width 0.5s ease;
+  }
+
+  .prediction-card {
+    background-color: var(--info-color);
+    color: var(--text-color);
+  }
+
+  .prediction-card .card-title,
+  .prediction-card .card-value {
+    color: var(--text-color);
+  }
+
+  .date-range {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .date-range input {
+    flex: 1;
+  }
+
+  .simple-bar-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .simple-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .simple-bar-label {
+    width: 120px;
+    text-align: right;
+  }
+
+  .simple-bar-fill {
+    height: 24px;
+    background-color: var(--accent-color);
+    transition: width 0.5s ease;
+  }
+
+  .simple-bar-value {
+    width: 80px;
+  }
+
+  .edit-button {
+    background-color: var(--info-color);
+    color: var(--text-color);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 10px;
+  }
+
+  .edit-button:hover {
+    background-color: #2980b9;
+  }
+</style>
+</head>
+<body>
+  <div class="dashboard">
+    <div id="alert" class="full-width alert" style="display: none;"></div>
+
+    <div class="summary-card card">
+      <div class="card-header">
+        <h2 class="card-title">Renda Mensal</h2>
+        <button class="edit-button" onclick="updateSalary()">Editar</button>
+      </div>
+      <p class="card-value" id="monthly-income">R$ 0,00</p>
+      <div class="kpi-trend" id="income-trend"></div>
+    </div>
+
+    <div class="summary-card card">
+      <div class="card-header">
+        <h2 class="card-title">Gastos Totais</h2>
+      </div>
+      <p class="card-value" id="total-expenses">R$ 0,00</p>
+      <div class="kpi-trend" id="expenses-trend"></div>
+    </div>
+
+    <div class="summary-card card">
+      <div class="card-header">
+        <h2 class="card-title">Saldo Disponível</h2>
+      </div>
+      <p class="card-value" id="available-balance">R$ 0,00</p>
+      <div class="kpi-trend" id="balance-trend"></div>
+    </div>
+
+    <div class="summary-card card">
+      <div class="card-header">
+        <h2 class="card-title">Meta de Economia</h2>
+        <button class="edit-button" onclick="updateSavingsGoal()">Editar</button>
+      </div>
+      <p class="card-value" id="savings-goal">R$ 0,00</p>
+      <div id="savings-goal-progress">
+        <div id="savings-goal-bar"></div>
+      </div>
+    </div>
+
+    <div class="chart-card card">
+      <div class="card-header">
+        <h2 class="card-title">Distribuição de Gastos</h2>
+      </div>
+      <div id="expenses-chart"></div>
+    </div>
+
+    <div class="chart-card card">
+      <div class="card-header">
+        <h2 class="card-title">Resumo Financeiro Mensal</h2>
+      </div>
+      <div id="simple-financial-summary" class="simple-bar-chart"></div>
+    </div>
+
+    <div class="full-width card">
+      <div class="card-header">
+        <h2 class="card-title">Gestão de Despesas</h2>
+      </div>
+      <div style="display: flex; gap: 24px;">
+        <div style="flex: 1;">
+          <h3>Adicionar Despesa</h3>
+          <div class="input-group">
+            <input type="text" id="expense-name" placeholder="Nome da Despesa">
+          </div>
+          <div class="input-group">
+            <select id="expense-category">
+              <option value="moradia">Moradia</option>
+              <option value="transporte">Transporte</option>
+              <option value="alimentacao">Alimentação</option>
+              <option value="saude">Saúde</option>
+              <option value="educacao">Educação</option>
+              <option value="lazer">Lazer</option>
+              <option value="investimentos">Investimentos</option>
+              <option value="outros">Outros</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <input type="number" id="expense-value" placeholder="Valor da Despesa">
+          </div>
+          <div class="date-range">
+            <input type="month" id="expense-start-date" placeholder="Mês de Início">
+            <input type="month" id="expense-end-date" placeholder="Mês de Fim">
+          </div>
+          <button class="btn" onclick="addExpense()">Adicionar Despesa</button>
+        </div>
+        <div style="flex: 2;">
+          <h3>Despesas Recentes</h3>
+          <table id="expenses-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card prediction-card card">
+      <div class="card-header">
+        <h2 class="card-title">Previsão Financeira</h2>
+      </div>
+      <p class="card-value" id="financial-prediction">R$ 0,00</p>
+      <p>Saldo previsto para o próximo mês</p>
+    </div>
+  </div>
+
+  <script>
+    let monthlyIncome = 0;
+    let expenses = [];
+    let savingsGoal = 1000;
+    let expensesChart;
+
+    function showAlert(message, type) {
+      const alertElement = document.getElementById('alert');
+      alertElement.textContent = message;
+      alertElement.className = `full-width alert alert-${type}`;
+      alertElement.style.display = 'block';
+      setTimeout(() => {
+        alertElement.style.display = 'none';
+      }, 3000);
+    }
+
+    function updateSalary() {
+      const newSalary = parseFloat(prompt("Digite o novo valor do salário:"));
+      if (!isNaN(newSalary) && newSalary >= 0) {
+        monthlyIncome = newSalary;
+        updateDashboard();
+        showAlert('Salário atualizado com sucesso!', 'success');
+      } else {
+        showAlert('Por favor, insira um valor válido para o salário.', 'error');
+      }
+    }
+
+    function updateSavingsGoal() {
+      const newGoal = parseFloat(prompt("Digite o novo valor da meta de economia:"));
+      if (!isNaN(newGoal) && newGoal >= 0) {
+        savingsGoal = newGoal;
+        updateDashboard();
+        showAlert('Meta de economia atualizada com sucesso!', 'success');
+      } else {
+        showAlert('Por favor, insira um valor válido para a meta de economia.', 'error');
+      }
+    }
+
+    function addExpense() {
+      const nameInput = document.getElementById('expense-name');
+      const categoryInput = document.getElementById('expense-category');
+      const valueInput = document.getElementById('expense-value');
+      const startDateInput = document.getElementById('expense-start-date');
+      const endDateInput = document.getElementById('expense-end-date');
+
+      const name = nameInput.value.trim();
+      const category = categoryInput.value;
+      const value = parseFloat(valueInput.value);
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+
+      if (name && category && !isNaN(value) && value > 0 && startDate && endDate && startDate <= endDate) {
+        expenses.push({ name, category, value, startDate, endDate });
+        updateTable();
+        updateDashboard();
+        updateCharts();
+        nameInput.value = '';
+        valueInput.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        showAlert('Despesa adicionada com sucesso!', 'success');
+      } else {
+        showAlert('Por favor, preencha todos os campos corretamente.', 'error');
+      }
+    }
+
+    function updateTable() {
+      const tableBody = document.getElementById('expenses-body');
+      tableBody.innerHTML = '';
+      expenses.forEach((expense, index) => {
+        const row = tableBody.insertRow();
+        row.innerHTML = `
+          <td>${expense.name}</td>
+          <td>${expense.category}</td>
+          <td>R$ ${expense.value.toFixed(2)}</td>
+          <td>${expense.startDate.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}</td>
+          <td>${expense.endDate.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}</td>
+          <td>
+            <button class="btn" onclick="editExpense(${index})">Editar</button>
+            <button class="btn btn-delete" onclick="deleteExpense(${index})">Excluir</button>
+          </td>
+        `;
+      });
+    }
+
+    function editExpense(index) {
+      const expense = expenses[index];
+      const newValue = parseFloat(prompt(`Editar valor para ${expense.name}:`, expense.value));
+      if (!isNaN(newValue) && newValue >= 0) {
+        expense.value = newValue;
+        updateTable();
+        updateDashboard();
+        updateCharts();
+        showAlert('Despesa atualizada com sucesso!', 'success');
+      } else {
+        showAlert('Por favor, insira um valor válido.', 'error');
+      }
+    }
+
+    function deleteExpense(index) {
+      if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+        expenses.splice(index, 1);
+        updateTable();
+        updateDashboard();
+        updateCharts();
+        showAlert('Despesa excluída com sucesso!', 'success');
+      }
+    }
+
+    function updateDashboard() {
+      const monthlyIncomeElement = document.getElementById('monthly-income');
+      const totalExpensesElement = document.getElementById('total-expenses');
+      const availableBalanceElement = document.getElementById('available-balance');
+      const savingsGoalElement = document.getElementById('savings-goal');
+      const savingsGoalBar = document.getElementById('savings-goal-bar');
+
+      const currentDate = new Date();
+      const totalExpenses = expenses.reduce((sum, expense) => {
+        if (expense.startDate <= currentDate && expense.endDate >= currentDate) {
+          return sum + expense.value;
+        }
+        return sum;
+      }, 0);
+      const availableBalance = monthlyIncome - totalExpenses;
+
+      monthlyIncomeElement.textContent = `R$ ${monthlyIncome.toFixed(2)}`;
+      totalExpensesElement.textContent = `R$ ${totalExpenses.toFixed(2)}`;
+      availableBalanceElement.textContent = `R$ ${availableBalance.toFixed(2)}`;
+      savingsGoalElement.textContent = `R$ ${savingsGoal.toFixed(2)}`;
+
+      updateTrend('income-trend', monthlyIncome, 5000);
+      updateTrend('expenses-trend', totalExpenses, 3000);
+      updateTrend('balance-trend', availableBalance, 2000);
+
+      const savingsProgress = (availableBalance / savingsGoal) * 100;
+      savingsGoalBar.style.width = `${Math.min(savingsProgress, 100)}%`;
+
+      updateFinancialPrediction();
+    }
+
+    function updateTrend(elementId, currentValue, comparisonValue) {
+      const element = document.getElementById(elementId);
+      const difference = currentValue - comparisonValue;
+      const percentChange = (difference / comparisonValue) * 100;
+      
+      let trendHTML = '';
+      if (difference > 0) {
+        trendHTML = `<span class="kpi-trend positive"><span class="kpi-trend-icon">▲</span> ${Math.abs(percentChange).toFixed(1)}%</span>`;
+      } else if (difference < 0) {
+        trendHTML = `<span class="kpi-trend negative"><span class="kpi-trend-icon">▼</span> ${Math.abs(percentChange).toFixed(1)}%</span>`;
+      } else {
+        trendHTML = `<span class="kpi-trend">0%</span>`;
+      }
+      
+      element.innerHTML = trendHTML;
+    }
+
+    function updateCharts() {
+      updateExpensesChart();
+      updateSimpleFinancialSummary();
+    }
+
+    function updateExpensesChart() {
+      const categoryTotals = expenses.reduce((totals, expense) => {
+        totals[expense.category] = (totals[expense.category] || 0) + expense.value;
+        return totals;
+      }, {});
+
+      const seriesData = Object.entries(categoryTotals).map(([category, total]) => ({
+        name: category,
+        y: total
+      }));
+
+      const options = {
+        chart: {
+          type: 'donut',
+          height: 350,
+          background: 'transparent'
+        },
+        series: seriesData.map(item => item.y),
+        labels: seriesData.map(item => item.name),
+        colors: ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'],
+        responsive: [{
+          breakpoint: 480,
+          options: {
+            chart: {
+              width: 200
+            },
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }],
+        theme: {
+          mode: 'dark'
+        }
+      };
+
+      if (expensesChart) {
+        expensesChart.updateOptions(options);
+      } else {
+        expensesChart = new ApexCharts(document.querySelector("#expenses-chart"), options);
+        expensesChart.render();
+      }
+    }
+
+    function updateSimpleFinancialSummary() {
+      const summaryContainer = document.getElementById('simple-financial-summary');
+      summaryContainer.innerHTML = '';
+
+      const currentDate = new Date();
+      const totalExpenses = expenses.reduce((sum, expense) => {
+        if (expense.startDate <= currentDate && expense.endDate >= currentDate) {
+          return sum + expense.value;
+        }
+        return sum;
+      }, 0);
+      const availableBalance = monthlyIncome - totalExpenses;
+
+      const data = [
+        { label: 'Renda', value: monthlyIncome },
+        { label: 'Despesas', value: totalExpenses },
+        { label: 'Saldo', value: availableBalance }
+      ];
+
+      const maxValue = Math.max(...data.map(item => item.value));
+
+      data.forEach(item => {
+        const barContainer = document.createElement('div');
+        barContainer.className = 'simple-bar';
+
+        const label = document.createElement('div');
+        label.className = 'simple-bar-label';
+        label.textContent = item.label;
+
+        const barFill = document.createElement('div');
+        barFill.className = 'simple-bar-fill';
+        const width = (item.value / maxValue) * 100;
+        barFill.style.width = `${width}%`;
+
+        const value = document.createElement('div');
+        value.className = 'simple-bar-value';
+        value.textContent = `R$ ${item.value.toFixed(2)}`;
+
+        barContainer.appendChild(label);
+        barContainer.appendChild(barFill);
+        barContainer.appendChild(value);
+
+        summaryContainer.appendChild(barContainer);
+      });
+    }
+
+    async function updateFinancialPrediction() {
+      const predictionElement = document.getElementById('financial-prediction');
+      
+      const currentDate = new Date();
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      const predictedExpenses = expenses.reduce((sum, expense) => {
+        if (expense.startDate <= nextMonth && expense.endDate >= nextMonth) {
+          return sum + expense.value;
+        }
+        return sum;
+      }, 0);
+      const predictedBalance = monthlyIncome - predictedExpenses;
+
+      predictionElement.textContent = `R$ ${predictedBalance.toFixed(2)}`;
+    }
+
+    // Inicialização
+    updateDashboard();
+    updateCharts();
+
+    // Simular dados iniciais
+    monthlyIncome = 5000;
+    expenses = [
+      { name: 'Aluguel', category: 'moradia', value: 1200, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
+      { name: 'Supermercado', category: 'alimentacao', value: 800, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
+      { name: 'Transporte', category: 'transporte', value: 300, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
+      { name: 'Internet', category: 'outros', value: 100, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
+      { name: 'Lazer', category: 'lazer', value: 200, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) }
+    ];
+    updateTable();
+    updateDashboard();
+    updateCharts();
+  </script>
+</body></html>
