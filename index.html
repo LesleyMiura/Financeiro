@@ -272,6 +272,53 @@
   .edit-button:hover {
     background-color: #2980b9;
   }
+
+  .installment-options {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .installment-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .installment-options input[type="radio"] {
+    width: auto;
+  }
+
+  #installment-count {
+    width: 80px;
+  }
+
+  .date-picker {
+    position: relative;
+  }
+
+  .date-picker input {
+    padding-right: 30px;
+  }
+
+  .date-picker::after {
+    content: "📅";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .installment-details {
+    display: none;
+    margin-top: 16px;
+  }
+
+  .installment-details.show {
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -353,9 +400,29 @@
           <div class="input-group">
             <input type="number" id="expense-value" placeholder="Valor da Despesa">
           </div>
-          <div class="date-range">
-            <input type="month" id="expense-start-date" placeholder="Mês de Início">
-            <input type="month" id="expense-end-date" placeholder="Mês de Fim">
+          <div class="installment-options">
+            <label>
+              <input type="radio" name="installment" value="single" checked onclick="toggleInstallmentOptions(false)">
+              Pagamento Único
+            </label>
+            <label>
+              <input type="radio" name="installment" value="multiple" onclick="toggleInstallmentOptions(true)">
+              Parcelado
+            </label>
+          </div>
+          <div id="single-payment-date" class="date-picker">
+            <input type="date" id="expense-single-date" placeholder="Data do Pagamento">
+          </div>
+          <div id="installment-details" class="installment-details">
+            <div class="input-group">
+              <input type="number" id="installment-count" placeholder="Nº Parcelas" min="2">
+            </div>
+            <div class="date-picker">
+              <input type="date" id="installment-start-date" placeholder="Data de Início">
+            </div>
+            <div class="date-picker">
+              <input type="date" id="installment-end-date" placeholder="Data de Fim">
+            </div>
           </div>
           <button class="btn" onclick="addExpense()">Adicionar Despesa</button>
         </div>
@@ -366,9 +433,11 @@
               <tr>
                 <th>Nome</th>
                 <th>Categoria</th>
-                <th>Valor</th>
+                <th>Valor Total</th>
+                <th>Valor Mensal</th>
                 <th>Início</th>
                 <th>Fim</th>
+                <th>Parcelas</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -425,45 +494,80 @@
       }
     }
 
+    function toggleInstallmentOptions(enable) {
+      document.getElementById('single-payment-date').style.display = enable ? 'none' : 'block';
+      document.getElementById('installment-details').classList.toggle('show', enable);
+    }
+
     function addExpense() {
       const nameInput = document.getElementById('expense-name');
       const categoryInput = document.getElementById('expense-category');
       const valueInput = document.getElementById('expense-value');
-      const startDateInput = document.getElementById('expense-start-date');
-      const endDateInput = document.getElementById('expense-end-date');
-
+      const isInstallment = document.querySelector('input[name="installment"]:checked').value === 'multiple';
+      
       const name = nameInput.value.trim();
       const category = categoryInput.value;
       const value = parseFloat(valueInput.value);
-      const startDate = new Date(startDateInput.value);
-      const endDate = new Date(endDateInput.value);
 
-      if (name && category && !isNaN(value) && value > 0 && startDate && endDate && startDate <= endDate) {
-        expenses.push({ name, category, value, startDate, endDate });
+      let startDate, endDate, installmentCount;
+
+      if (isInstallment) {
+        const installmentCountInput = document.getElementById('installment-count');
+        const startDateInput = document.getElementById('installment-start-date');
+        const endDateInput = document.getElementById('installment-end-date');
+
+        installmentCount = parseInt(installmentCountInput.value);
+        startDate = new Date(startDateInput.value);
+        endDate = new Date(endDateInput.value);
+
+        if (!(installmentCount && installmentCount > 1 && startDate && endDate && startDate <= endDate)) {
+          showAlert('Por favor, preencha todos os campos de parcelamento corretamente.', 'error');
+          return;
+        }
+      } else {
+        const singleDateInput = document.getElementById('expense-single-date');
+        startDate = new Date(singleDateInput.value);
+        endDate = new Date(singleDateInput.value);
+        installmentCount = 1;
+      }
+
+      if (name && category && !isNaN(value) && value > 0 && startDate && endDate) {
+        expenses.push({ name, category, value, startDate, endDate, installmentCount });
         updateTable();
         updateDashboard();
         updateCharts();
-        nameInput.value = '';
-        valueInput.value = '';
-        startDateInput.value = '';
-        endDateInput.value = '';
+        clearInputs();
         showAlert('Despesa adicionada com sucesso!', 'success');
       } else {
         showAlert('Por favor, preencha todos os campos corretamente.', 'error');
       }
     }
 
+    function clearInputs() {
+      document.getElementById('expense-name').value = '';
+      document.getElementById('expense-value').value = '';
+      document.getElementById('expense-single-date').value = '';
+      document.getElementById('installment-count').value = '';
+      document.getElementById('installment-start-date').value = '';
+      document.getElementById('installment-end-date').value = '';
+    }
+
     function updateTable() {
       const tableBody = document.getElementById('expenses-body');
       tableBody.innerHTML = '';
       expenses.forEach((expense, index) => {
+        const monthsDiff = (expense.endDate.getFullYear() - expense.startDate.getFullYear()) * 12 + 
+                           (expense.endDate.getMonth() - expense.startDate.getMonth()) + 1;
+        const monthlyValue = expense.value / monthsDiff;
         const row = tableBody.insertRow();
         row.innerHTML = `
           <td>${expense.name}</td>
           <td>${expense.category}</td>
           <td>R$ ${expense.value.toFixed(2)}</td>
-          <td>${expense.startDate.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}</td>
-          <td>${expense.endDate.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}</td>
+          <td>R$ ${monthlyValue.toFixed(2)}</td>
+          <td>${expense.startDate.toLocaleDateString('pt-BR')}</td>
+          <td>${expense.endDate.toLocaleDateString('pt-BR')}</td>
+          <td>${expense.installmentCount > 1 ? expense.installmentCount + 'x' : '-'}</td>
           <td>
             <button class="btn" onclick="editExpense(${index})">Editar</button>
             <button class="btn btn-delete" onclick="deleteExpense(${index})">Excluir</button>
@@ -506,10 +610,14 @@
       const currentDate = new Date();
       const totalExpenses = expenses.reduce((sum, expense) => {
         if (expense.startDate <= currentDate && expense.endDate >= currentDate) {
-          return sum + expense.value;
+          const monthsDiff = (expense.endDate.getFullYear() - expense.startDate.getFullYear()) * 12 + 
+                             (expense.endDate.getMonth() - expense.startDate.getMonth()) + 1;
+          const monthlyValue = expense.value / monthsDiff;
+          return sum + monthlyValue;
         }
         return sum;
       }, 0);
+      
       const availableBalance = monthlyIncome - totalExpenses;
 
       monthlyIncomeElement.textContent = `R$ ${monthlyIncome.toFixed(2)}`;
@@ -551,7 +659,10 @@
 
     function updateExpensesChart() {
       const categoryTotals = expenses.reduce((totals, expense) => {
-        totals[expense.category] = (totals[expense.category] || 0) + expense.value;
+        const monthsDiff = (expense.endDate.getFullYear() - expense.startDate.getFullYear()) * 12 + 
+                           (expense.endDate.getMonth() - expense.startDate.getMonth()) + 1;
+        const monthlyValue = expense.value / monthsDiff;
+        totals[expense.category] = (totals[expense.category] || 0) + monthlyValue;
         return totals;
       }, {});
 
@@ -600,7 +711,10 @@
       const currentDate = new Date();
       const totalExpenses = expenses.reduce((sum, expense) => {
         if (expense.startDate <= currentDate && expense.endDate >= currentDate) {
-          return sum + expense.value;
+          const monthsDiff = (expense.endDate.getFullYear() - expense.startDate.getFullYear()) * 12 + 
+                             (expense.endDate.getMonth() - expense.startDate.getMonth()) + 1;
+          const monthlyValue = expense.value / monthsDiff;
+          return sum + monthlyValue;
         }
         return sum;
       }, 0);
@@ -646,7 +760,10 @@
       const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
       const predictedExpenses = expenses.reduce((sum, expense) => {
         if (expense.startDate <= nextMonth && expense.endDate >= nextMonth) {
-          return sum + expense.value;
+          const monthsDiff = (expense.endDate.getFullYear() - expense.startDate.getFullYear()) * 12 + 
+                             (expense.endDate.getMonth() - expense.startDate.getMonth()) + 1;
+          const monthlyValue = expense.value / monthsDiff;
+          return sum + monthlyValue;
         }
         return sum;
       }, 0);
@@ -662,11 +779,11 @@
     // Simular dados iniciais
     monthlyIncome = 5000;
     expenses = [
-      { name: 'Aluguel', category: 'moradia', value: 1200, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
-      { name: 'Supermercado', category: 'alimentacao', value: 800, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
-      { name: 'Transporte', category: 'transporte', value: 300, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
-      { name: 'Internet', category: 'outros', value: 100, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) },
-      { name: 'Lazer', category: 'lazer', value: 200, startDate: new Date(2023, 0, 1), endDate: new Date(2023, 11, 31) }
+      { name: 'Aluguel', category: 'moradia', value: 1200, startDate: new Date(), endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), installmentCount: 12 },
+      { name: 'Supermercado', category: 'alimentacao', value: 800, startDate: new Date(), endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), installmentCount: 12 },
+      { name: 'Transporte', category: 'transporte', value: 300, startDate: new Date(), endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), installmentCount: 12 },
+      { name: 'Internet', category: 'outros', value: 100, startDate: new Date(), endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), installmentCount: 12 },
+      { name: 'Lazer', category: 'lazer', value: 200, startDate: new Date(), endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), installmentCount: 12 }
     ];
     updateTable();
     updateDashboard();
